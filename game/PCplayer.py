@@ -169,13 +169,17 @@ def play(last_play, hand, power=1):
     plays, if_bomb, if_rocket = generate_all_plays(hand)
     print(last_play_type)
     
+
     if last_play_type[0] is None:
         same_type_hands = []
         for i in plays.values():
             same_type_hands.extend(i)
         print(same_type_hands)
     else:
-        same_type_hands = plays[last_play_type[0]]
+        try:
+            same_type_hands = plays[last_play_type[0]]
+        except:
+            same_type_hands = []
         if if_bomb > 0:
             same_type_hands.append(plays['bomb']) 
 

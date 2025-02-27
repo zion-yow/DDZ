@@ -12,10 +12,13 @@ def _exclude_2_and_jokers(ranks):
 def get_card_type(cards):
     """判断牌型并返回类型标识和关键值"""
     card_count = len(cards)
-    ranks = [c.rank.value for c in cards]
-    rank_counter = Counter(ranks)
-    unique_ranks = len(rank_counter)
-    sorted_ranks = sorted(ranks)
+    try:
+        ranks = [c.rank.value for c in cards]
+        rank_counter = Counter(ranks)
+        unique_ranks = len(rank_counter)
+        sorted_ranks = sorted(ranks)
+    except:
+        print(cards)
 
     # 王炸
     if card_count == 2 and {16, 17} == set(ranks):

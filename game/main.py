@@ -33,7 +33,7 @@ class DouDiZhuGame:
     
     def shuffle_and_deal(self):
         """洗牌并发牌"""
-        random.shuffle(self.deck)
+        random.shuffle(self.deck, random.seed(1))
         for i in range(3):
             start = i * 17
             end = start + 17
@@ -58,7 +58,7 @@ class DouDiZhuGame:
         self.current_player = landlord
 
         print(f"{self.players[landlord].name} becomes landlord!")
-        self.players[landlord].name = 'LANDLORD'
+        self.players[landlord].name = self.players[landlord].name + ' (LANDLORD)'
 
 
     def playing(self, current_player, cardindexes):
@@ -93,10 +93,7 @@ class DouDiZhuGame:
         
         if valider:
             # 移除手牌
-            # print(current_player.hand)
-            for i in current_player.hand:
-                del i
-
+            current_player.hand.remove(played[0])
             self.last_played = played
             
             #  连续过牌次数清零
@@ -120,7 +117,7 @@ class DouDiZhuGame:
             print(f"\n{current_player.name}'s turn")
             print( current_player.hand) # 假设AI明牌
             # 玩家出牌
-            if current_player.name == 'You':
+            if current_player.name[:3] == 'You':
                 try:
                     selection = input("Enter card indexes to play (space separated) or pass: ")# 输入要出的牌的索引，用空格分隔
                     if selection.lower() == 'pass':
@@ -128,10 +125,12 @@ class DouDiZhuGame:
                         if not self.last_played: # 作为第一个出牌人，未出牌时不能过
                             print("You must play cards first!")
                             continue
-                        break
-                    
-                    indexes = list(map(int, selection.split()))
-                    _vail, played_cards = self.playing(current_player, indexes)
+                        else:
+                            print('pass')
+                            pass
+                    else:
+                        indexes = list(map(int, selection.split()))
+                        _vail, played_cards = self.playing(current_player, indexes)
 
                     if _vail:
                         pass
@@ -171,6 +170,16 @@ class DouDiZhuGame:
             if self.continued_passed_count == 2:
                 self.last_played = []
             current_player = self.players[self.current_player]
+
+            winner = self.check_winner()
+            if winner:
+                print(f"\n{winner.name} wins!")
+                if winner.role == 'landlord':
+                    print("Landlord wins!")
+                else:
+                    print("Peasants win!")
+                    
+                break
             
 
     def check_winner(self):
@@ -184,14 +193,6 @@ class DouDiZhuGame:
         self.determine_landlord()
         
         while True:
-            winner = self.check_winner()
-            if winner:
-                print(f"\n{winner.name} wins!")
-                if winner.role == 'landlord':
-                    print("Landlord wins!")
-                else:
-                    print("Peasants win!")
-                break
             self.play_round()
 
 if __name__ == "__main__":
