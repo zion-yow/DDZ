@@ -95,24 +95,27 @@ class DouDiZhuGame:
             # 移除手牌
             current_player.hand.remove(played[0])
             self.last_played = played
-            
-            #  连续过牌次数清零
-            self.continued_passed_count = 0
-            # 展示出的牌
-            print(played)
-            return True, played
+
+            if played == []:
+                return False, played
+            else:
+                #  连续过牌次数清零
+                self.continued_passed_count = 0
+                # 展示出的牌
+                print(played)
+                return True, played
 
         else:
             print(played)
             print("Invalid play! Try again.")
             return False, played
 
-    def play_round(self):
+    def play_round(self, winner):
         """一轮游戏"""
         current_player = self.players[self.current_player]
         valid_play = False
 
-        while not valid_play:
+        while not valid_play and not winner:
             print(current_player.name)
             print(f"\n{current_player.name}'s turn")
             print( current_player.hand) # 假设AI明牌
@@ -127,7 +130,7 @@ class DouDiZhuGame:
                             continue
                         else:
                             print('pass')
-                            pass
+                            _vail = True # 讓過
                     else:
                         indexes = list(map(int, selection.split()))
                         _vail, played_cards = self.playing(current_player, indexes)
@@ -165,22 +168,24 @@ class DouDiZhuGame:
                     else:
                         continue
             
+            winner = self.check_winner()
+            if winner:
+                print(f"\n{winner.name} wins!")
+                if winner.role == 'landlord':
+                    print("Landlord wins!")
+                    break
+                else:
+                    print("Peasants win!")
+                    break
+
             # 下一个玩家
             self.current_player = (self.current_player + 1) % 3 # 下一个玩家
             if self.continued_passed_count == 2:
                 self.last_played = []
             current_player = self.players[self.current_player]
 
-            winner = self.check_winner()
-            if winner:
-                print(f"\n{winner.name} wins!")
-                if winner.role == 'landlord':
-                    print("Landlord wins!")
-                else:
-                    print("Peasants win!")
-                    
-                break
             
+                    
 
     def check_winner(self):
         for player in self.players:
@@ -192,8 +197,10 @@ class DouDiZhuGame:
         self.shuffle_and_deal()
         self.determine_landlord()
         
-        while True:
-            self.play_round()
+        # 游戏开始
+        winner = self.check_winner()
+        self.play_round(winner)
+                
 
 if __name__ == "__main__":
     game = DouDiZhuGame()
