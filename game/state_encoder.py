@@ -113,5 +113,88 @@ def get_obs(game):
     for i in range(3):
         observations[i] = encode_state(game, i)
 
-    print(pd.DataFrame(observations))
+    # 打印更详细的游戏状态信息
+    print("\n===== 当前游戏状态 =====")
+    print(f"当前玩家: {game.players[game.current_player].name}")
+    print(f"地主: {next((p.name for p in game.players if p.role == 'landlord'), 'Unknown')}")
+    
+    # 显示各玩家手牌数量
+    print("\n手牌数量:")
+    for i, player in enumerate(game.players):
+        print(f"{player.name}: {len(player.hand)} 张牌")
+    
+    # 显示最后出的牌
+    print("\n最后出牌:")
+    if game.last_played:
+        print(game.last_played)
+    else:
+        print("无")
+    
+    # 显示历史出牌记录(最近5次)
+    print("\n出牌历史(最近5次):")
+    recent_history = game.play_history[-5:] if len(game.play_history) >= 5 else game.play_history
+    for idx, cards in recent_history:
+        player_name = game.players[idx].name
+        if cards:
+            print(f"{player_name}: {cards}")
+        else:
+            print(f"{player_name}: 过牌")
+    
+    # 创建有意义的索引标签
+    # 手牌部分 (54维)
+    hand_indices = []
+    for rank in range(3, 18):  # 3到A，2，小王，大王
+        rank_name = get_rank_name(rank)
+        if rank <= 15:  # 普通牌
+            for suit in ["♠", "♥", "♣", "♦"]:
+                hand_indices.append(f"{rank_name}{suit}")
+        else:  # 大小王
+            hand_indices.append(f"{rank_name}")
+    
+    # 最后出牌部分 (54维)
+    last_played_indices = [f"上家-{idx}" for idx in hand_indices]
+    
+    # 位置和牌数信息 (3维)
+    position_indices = ["地主相对位置", "下家牌数", "上家牌数"]
+    
+    # 角色信息 (3维)
+    role_indices = ["地主", "农民1", "农民2"]
+    
+    # 历史出牌信息 (前5轮，每个玩家)
+    history_indices = []
+    for player_idx in range(3):
+        player_name = f"玩家{player_idx}"
+        for round_idx in range(5):
+            for card_idx in hand_indices:
+                history_indices.append(f"历史-{player_name}-轮{round_idx}-{card_idx}")
+    
+    # 合并所有索引
+    all_indices = hand_indices + last_played_indices + position_indices + role_indices + history_indices
+    
+    # 显示状态向量的关键部分
+    print("\n状态向量摘要:")
+    df = pd.DataFrame(observations, index=all_indices)
+    
+    # 显示手牌部分
+    print("\n手牌部分:")
+    print(df.loc[hand_indices].head(10))
+    print("...")
+    
+    # 显示最后出牌部分
+    print("\n最后出牌部分:")
+    print(df.loc[last_played_indices].head(10))
+    print("...")
+    
+    # 显示位置和角色信息
+    print("\n位置和角色信息:")
+    print(df.loc[position_indices + role_indices])
+    
     return observations
+
+def get_rank_name(rank_value):
+    """获取牌面值的可读名称"""
+    rank_names = {
+        3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8", 9: "9", 10: "10",
+        11: "J", 12: "Q", 13: "K", 14: "A", 15: "2", 16: "小王", 17: "大王"
+    }
+    return rank_names.get(rank_value, str(rank_value))

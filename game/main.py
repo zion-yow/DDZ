@@ -6,13 +6,21 @@ from cards import Suit, Rank, Card, Player
 import engine as engine
 import PCplayer as PCplayer
 import state_encoder as encoder  # 导入状态编码模块
+import time  # 导入time模块用于AI对战时的延迟显示
 
 
 
 
 class DouDiZhuGame:
-    def __init__(self):
-        self.players = [Player("You",''), Player("PCPlayer1", 'peasant1'), Player("PCPlayer2", 'peasant2')]
+    def __init__(self, game_mode='human_vs_ai'):
+        self.game_mode = game_mode  # 游戏模式：'human_vs_ai' 或 'ai_vs_ai'
+        
+        # 根据游戏模式设置玩家
+        if game_mode == 'human_vs_ai':
+            self.players = [Player("You",''), Player("PCPlayer1", 'peasant1'), Player("PCPlayer2", 'peasant2')]
+        else:  # AI对战模式
+            self.players = [Player("AI-1",''), Player("AI-2", 'peasant1'), Player("AI-3", 'peasant2')]
+        
         self.deck = [] # 牌堆
         self.current_player = 0
         self.last_played = [] # 上家出的牌
@@ -164,8 +172,8 @@ class DouDiZhuGame:
 
             current_state = self.game_state[self.current_player]
 
-            # 玩家出牌
-            if current_player.name[:3] == 'You':
+            # 人机对战模式下的人类玩家
+            if self.game_mode == 'human_vs_ai' and current_player.name[:3] == 'You':
                 try:
                     selection = input("Enter card indexes to play (space separated) or pass: ")# 输入要出的牌的索引，用空格分隔
                     if selection.lower() == 'pass':
@@ -195,22 +203,22 @@ class DouDiZhuGame:
                     print("Invalid input! Try again.")
                     continue
 
-            # 电脑出牌
+            # AI玩家（包括AI对战模式下的所有玩家）
             else:
-                # 电脑AI出牌
-                # 这里可以使用状态信息来改进AI决策
-                # current_state = self.game_state[self.current_player]
-                '''AI出牌逻辑'''
+                # 在AI对战模式下添加延迟，使游戏过程可观察
+                if self.game_mode == 'ai_vs_ai':
+                    time.sleep(1)  # 延迟1秒，使AI对战过程更容易观察
 
+                # 电脑AI出牌
                 _vail, ai_played_cards = self.ai_player_playing(current_player)
 
                 # 出牌為 None 時視爲過牌
                 if ai_played_cards is None:
                     if not self.last_played: # 作为第一个出牌人，未出牌时不能过
-                        print("You must play cards first!")
+                        print(f"{current_player.name} must play cards first!")
                         continue
                     else:
-                        print('AI passes')
+                        print(f'{current_player.name} passes')
                 else:
                     if _vail:
                         played_cards = ai_played_cards
@@ -257,5 +265,21 @@ class DouDiZhuGame:
                 
 
 if __name__ == "__main__":
-    game = DouDiZhuGame()
+    print("欢迎来到斗地主游戏!")
+    print("请选择游戏模式:")
+    print("1. 人机对战")
+    print("2. AI自我对战")
+    
+    while True:
+        choice = input("请输入选项(1或2): ")
+        if choice == '1':
+            game_mode = 'human_vs_ai'
+            break
+        elif choice == '2':
+            game_mode = 'ai_vs_ai'
+            break
+        else:
+            print("无效选择，请重新输入!")
+    
+    game = DouDiZhuGame(game_mode)
     game.start_game()
