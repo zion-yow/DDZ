@@ -5,6 +5,7 @@ from itertools import groupby
 from cards import Suit, Rank, Card, Player
 import engine as engine
 import PCplayer as PCplayer
+import state_encoder as encoder  # 导入状态编码模块
 
 
 
@@ -18,6 +19,9 @@ class DouDiZhuGame:
         self.landlord_cards = []
         self.continued_passed_count = 0
         self.create_deck()
+        self.play_history = []  # 记录出牌历史，格式为[(player_index, cards), ...]
+        self.game_state = {}  # 存储游戏状态
+        
 
     
     def create_deck(self):
@@ -60,6 +64,9 @@ class DouDiZhuGame:
         print(f"{self.players[landlord].name} becomes landlord!")
         self.players[landlord].name = self.players[landlord].name + ' (LANDLORD)'
 
+        # 更新游戏状态
+        self.update_game_state()
+
 
     def playing(self, current_player, cardindexes):
         """出牌"""
@@ -70,6 +77,10 @@ class DouDiZhuGame:
         if valider:
             # 移除手牌
             print(current_player.hand)
+            # 记录出牌历史
+            player_index = self.players.index(current_player)
+            self.play_history.append((player_index, played_cards))
+
             for i in sorted(indexes, reverse=True):
                 del current_player.hand[i]
             self.last_played = played_cards
@@ -78,6 +89,9 @@ class DouDiZhuGame:
             self.continued_passed_count = 0
             # 展示出的牌
             print(played_cards)
+            # 更新游戏状态
+            self.update_game_state()
+
             return True, played_cards
 
         else:
@@ -93,22 +107,50 @@ class DouDiZhuGame:
         
         if valider:
             # 移除手牌
-            current_player.hand.remove(played[0])
-            self.last_played = played
+            if played and len(played) > 0:  # 确保played不为空
+                for card in played:
+                    if card in current_player.hand:
+                        current_player.hand.remove(card)
+                self.last_played = played
 
-            if played == []:
-                return False, played
-            else:
                 #  连续过牌次数清零
                 self.continued_passed_count = 0
                 # 展示出的牌
                 print(played)
-                return True, played
+                
+                # 记录出牌历史
+                player_index = self.players.index(current_player)
+                self.play_history.append((player_index, played))
 
+                # 更新游戏状态
+                self.update_game_state()
+                
+                return True, played
+            else:
+                if not self.last_played:  # 作为第一个出牌人，未出牌时不能过
+                    return False, played
+                else:
+                    self.continued_passed_count += 1
+                    print('pass')
+
+                    # 记录过牌历史
+                    player_index = self.players.index(current_player)
+                    self.play_history.append((player_index, []))
+                    
+                    # 更新游戏状态
+                    self.update_game_state()
+                    
+                    return False, played
         else:
             print(played)
             print("Invalid play! Try again.")
             return False, played
+
+
+    def update_game_state(self):
+        """更新游戏状态"""
+        self.game_state = encoder.get_obs(self)
+
 
     def play_round(self, winner):
         """一轮游戏"""
@@ -119,18 +161,26 @@ class DouDiZhuGame:
             print(current_player.name)
             print(f"\n{current_player.name}'s turn")
             print( current_player.hand) # 假设AI明牌
+
+            current_state = self.game_state[self.current_player]
+
             # 玩家出牌
             if current_player.name[:3] == 'You':
                 try:
                     selection = input("Enter card indexes to play (space separated) or pass: ")# 输入要出的牌的索引，用空格分隔
                     if selection.lower() == 'pass':
-                        self.continued_passed_count += 1
                         if not self.last_played: # 作为第一个出牌人，未出牌时不能过
                             print("You must play cards first!")
                             continue
                         else:
+                            self.continued_passed_count += 1
                             print('pass')
-                            _vail = True # 讓過
+                            # 记录过牌历史
+                            player_index = self.players.index(current_player)
+                            self.play_history.append((player_index, []))
+                            # 更新游戏状态
+                            self.update_game_state()
+                            _vail = True  # 设置为有效操作，这样可以继续游戏
                     else:
                         indexes = list(map(int, selection.split()))
                         _vail, played_cards = self.playing(current_player, indexes)
@@ -148,7 +198,8 @@ class DouDiZhuGame:
             # 电脑出牌
             else:
                 # 电脑AI出牌
-
+                # 这里可以使用状态信息来改进AI决策
+                # current_state = self.game_state[self.current_player]
                 '''AI出牌逻辑'''
 
                 _vail, ai_played_cards = self.ai_player_playing(current_player)
@@ -159,12 +210,10 @@ class DouDiZhuGame:
                         print("You must play cards first!")
                         continue
                     else:
-                        self.continued_passed_count += 1
-                        print('pass')
+                        print('AI passes')
                 else:
                     if _vail:
                         played_cards = ai_played_cards
-                        pass
                     else:
                         continue
             
@@ -182,11 +231,13 @@ class DouDiZhuGame:
             self.current_player = (self.current_player + 1) % 3 # 下一个玩家
             if self.continued_passed_count == 2:
                 self.last_played = []
+
+                # 更新游戏状态
+                self.update_game_state()
+
             current_player = self.players[self.current_player]
 
             
-                    
-
     def check_winner(self):
         for player in self.players:
             if not player.hand:
@@ -197,6 +248,9 @@ class DouDiZhuGame:
         self.shuffle_and_deal()
         self.determine_landlord()
         
+        # 初始化游戏状态
+        self.update_game_state()
+
         # 游戏开始
         winner = self.check_winner()
         self.play_round(winner)

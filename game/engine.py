@@ -132,7 +132,7 @@ def validate_play(played_cards, last_played):
     """增强的验证逻辑"""
     # 空牌（过牌）处理
     if not played_cards:
-        return not bool(last_played)  # 首轮不能过牌
+        return bool(last_played)  # 首轮不能过牌，但有上家出牌时可以过
 
     # 基本牌型验证
     current_type = get_card_type(played_cards)
