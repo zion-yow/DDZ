@@ -164,6 +164,28 @@ def generate_all_plays(hand):
     
     return plays, if_bomb, if_rocket
 
+def get_valid_actions(hand, last_played):
+    # Create index_map to map card object IDs to their indices in hand
+    index_map = {id(card): idx for idx, card in enumerate(hand)}
+    
+    plays, _, _ = generate_all_plays(hand)
+    valid_actions = []
+    for play_type in plays:
+        for play in plays[play_type]:
+            if engine.validate_play(play, last_played):
+                indexes = [index_map[id(card)] for card in play]
+                valid_actions.append(sorted(indexes))
+    
+    # Remove duplicate combinations
+    unique_actions = []
+    seen = set()
+    for action in valid_actions:
+        t = tuple(action)
+        if t not in seen:
+            seen.add(t)
+            unique_actions.append(action)
+    return unique_actions
+
 def play(last_play, hand, power=1):
     last_play_type = engine.get_card_type(last_play)
     plays, if_bomb, if_rocket = generate_all_plays(hand)

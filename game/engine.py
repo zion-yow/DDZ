@@ -131,7 +131,7 @@ def compare_plays(current_type, last_type):
 def validate_play(played_cards, last_played):
     """增强的验证逻辑"""
     # 空牌（过牌）处理
-    if not played_cards:
+    if not played_cards or len(played_cards)==0:
         return bool(last_played)  # 首轮不能过牌，但有上家出牌时可以过
 
     # 基本牌型验证
@@ -156,3 +156,4 @@ def validate_play(played_cards, last_played):
             return False
 
     return compare_plays(current_type, last_type)
+

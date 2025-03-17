@@ -1,6 +1,8 @@
 import numpy as np
 from cards import Rank, Suit, Card
 import pandas as pd
+import engine
+import PCplayer
 
 # 牌面值映射
 CARD_RANK_TO_ID = {
@@ -189,7 +191,16 @@ def get_obs(game):
     print("\n位置和角色信息:")
     print(df.loc[position_indices + role_indices])
     
-    return observations
+    # Add action space validation
+    valid_actions = [PCplayer.get_valid_actions(p.hand, game.last_played) for p in game.players]
+    
+    base_state_size = 925  # 54(hand) + 54(last_played) + 3(position) + 3(role) + 810(history) + 1(valid_action)
+    return [
+        np.concatenate([
+            np.array(state_vector, dtype=np.float32),
+            np.array([1 if len(valid_actions[i])>0 else 0], dtype=np.float32)
+        ]) for i, state_vector in enumerate(observations.values())
+    ]
 
 def get_rank_name(rank_value):
     """获取牌面值的可读名称"""

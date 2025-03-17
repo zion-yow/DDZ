@@ -9,10 +9,9 @@ import state_encoder as encoder  # 导入状态编码模块
 import time  # 导入time模块用于AI对战时的延迟显示
 
 
-
-
 class DouDiZhuGame:
-    def __init__(self, game_mode='human_vs_ai'):
+    def __init__(self, game_mode='human_vs_ai', agent=None):
+        self.agent = agent
         self.game_mode = game_mode  # 游戏模式：'human_vs_ai' 或 'ai_vs_ai'
         
         # 根据游戏模式设置玩家
@@ -31,7 +30,6 @@ class DouDiZhuGame:
         self.game_state = {}  # 存储游戏状态
         
 
-    
     def create_deck(self):
         """生成牌库"""
         for suit in [Suit.SPADE, Suit.HEART, Suit.CLUB, Suit.DIAMOND]:
@@ -108,9 +106,13 @@ class DouDiZhuGame:
 
             return False, played_cards
 
-    def ai_player_playing(self, current_player):
-        """ai的选牌"""
-        played = PCplayer.play(self.last_played, current_player.hand, power=1)
+    def ai_player_playing(self, current_player, action=None):
+        """AI的选牌，支持RL智能体动作"""
+        if action is not None:  # RL智能体动作
+            played = action
+        else:  # 原始PC玩家逻辑
+            played = PCplayer.play(self.last_played, current_player.hand, power=1)
+        
         valider = engine.validate_play(played, self.last_played)
         
         if valider:
@@ -148,7 +150,7 @@ class DouDiZhuGame:
                     # 更新游戏状态
                     self.update_game_state()
                     
-                    return False, played
+                    return True, played
         else:
             print(played)
             print("Invalid play! Try again.")
@@ -175,7 +177,17 @@ class DouDiZhuGame:
             # 人机对战模式下的人类玩家
             if self.game_mode == 'human_vs_ai' and current_player.name[:3] == 'You':
                 try:
-                    selection = input("Enter card indexes to play (space separated) or pass: ")# 输入要出的牌的索引，用空格分隔
+                    if self.agent:
+                        valid_actions = PCplayer.get_valid_actions(current_player.hand, self.last_played)
+                        state = self.game_state[self.current_player]
+                        action = self.agent.select_action(state, valid_actions)
+                        indexes = [current_player.hand.index(card) for card in action]
+                        valid, played_cards = self.playing(current_player, indexes)
+                        reward = 1.0 if self.check_winner() == self.current_player else 0.0 if valid else -0.5
+                        done = self.check_winner() is not None
+                        self.agent.store_experience(state, indexes, reward, self.game_state[self.current_player], done)
+                    else:
+                        selection = input("Enter card indexes to play (space separated) or pass: ")
                     if selection.lower() == 'pass':
                         if not self.last_played: # 作为第一个出牌人，未出牌时不能过
                             print("You must play cards first!")
@@ -191,7 +203,10 @@ class DouDiZhuGame:
                             _vail = True  # 设置为有效操作，这样可以继续游戏
                     else:
                         indexes = list(map(int, selection.split()))
-                        _vail, played_cards = self.playing(current_player, indexes)
+                        valid, played_cards = self.playing(current_player, indexes)
+                        reward = 1.0 if self.check_winner() == self.current_player else 0.0 if valid else -0.5
+                        done = self.check_winner() is not None
+                        self.agent.store_experience(state, indexes, reward, self.game_state[self.current_player], done)
 
                     if _vail:
                         pass
@@ -206,8 +221,8 @@ class DouDiZhuGame:
             # AI玩家（包括AI对战模式下的所有玩家）
             else:
                 # 在AI对战模式下添加延迟，使游戏过程可观察
-                if self.game_mode == 'ai_vs_ai':
-                    time.sleep(1)  # 延迟1秒，使AI对战过程更容易观察
+                # if self.game_mode == 'ai_vs_ai':
+                    # time.sleep(1)  # 延迟1秒，使AI对战过程更容易观察
 
                 # 电脑AI出牌
                 _vail, ai_played_cards = self.ai_player_playing(current_player)
@@ -281,5 +296,3 @@ if __name__ == "__main__":
         else:
             print("无效选择，请重新输入!")
     
-    game = DouDiZhuGame(game_mode)
-    game.start_game()
